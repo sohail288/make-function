@@ -4,6 +4,7 @@ trap 'cleanTemporary && exit 1' SIGINT SIGTERM
 
 # paths
 FUNCTION_FILE_PATH="$HOME/local/bin/_functions"
+FUNCTION_FOLDER="$HOME/local/bin/functions"
 
 # TODO: have some kind of adaptor that allows files to be generated to the proper format
 # in any way? Trying to keep everything pure bash for now.
@@ -21,7 +22,9 @@ cleanTemporary() {
   echo
   echo  'exiting'
   echo
-  rm -f $FUNCTION_DEFS_PATH
+  rm -f "$FUNCTION_DEFS_PATH"
+  rm -f "$FUNCTION_FOLDER/*"
+  rmdir "$FUNCTION_FOLDER"
 }
 
 initialize () {
@@ -29,13 +32,14 @@ initialize () {
     mkdir -p $(dirname $FUNCTION_DEFS_PATH)
     touch $FUNCTION_DEFS_PATH
   fi
+
+  if ! [ -d "$FUNCTION_FOLDER" ]; then
+    mkdir -p "$FUNCTION_FOLDER"
+  fi
 }
 
 generate() {
   # set -x
-  echo "#! /bin/bash" > $FUNCTION_FILE_PATH
-  echo "" >> $FUNCTION_FILE_PATH
-  echo "set -a" >> $FUNCTION_FILE_PATH
   cat $FUNCTION_DEFS_PATH | while read -r ALIAS; do
     read -r COMMAND
     read -r DOCUMENTATION
@@ -46,8 +50,9 @@ generate() {
       exit 1;
     fi
 
-    # output the command as a shell function
-    printf "$ALIAS() {\n" >> $FUNCTION_FILE_PATH
+    FUNCTION_FILE_PATH="$FUNCTION_FOLDER/$ALIAS"
+    echo "#! /bin/bash" > "$FUNCTION_FILE_PATH"
+    echo "" >> $FUNCTION_FILE_PATH
 
     command_with_replacements=""
     replacement_mapping=""
@@ -71,21 +76,18 @@ generate() {
     done
 
     total_parameters=$(( $(printf "$replacement_mapping" | wc -l) + 0 ))
-    printf "\tif ! [ \$# -eq $total_parameters ]; then\n" >> $FUNCTION_FILE_PATH
-    printf "\t\t" >> $FUNCTION_FILE_PATH
+    printf "if ! [ \$# -eq $total_parameters ]; then\n" >> $FUNCTION_FILE_PATH
+    printf "\t" >> $FUNCTION_FILE_PATH
     echo "echo $DOCUMENTATION" >> $FUNCTION_FILE_PATH
     echo ""
-    printf "\t\t" >> $FUNCTION_FILE_PATH
+    printf "\t" >> $FUNCTION_FILE_PATH
     echo echo "USAGE: $ALIAS " "$(printf "$replacement_mapping" | tr '\n' ' ')" >> $FUNCTION_FILE_PATH
     echo ""
-    printf "\t\treturn 1\n" >> $FUNCTION_FILE_PATH
-    printf "\tfi\n" >> $FUNCTION_FILE_PATH
-    printf "\t" >> $FUNCTION_FILE_PATH
+    printf "\treturn 1\n" >> $FUNCTION_FILE_PATH
+    printf "fi\n" >> $FUNCTION_FILE_PATH
     echo $command_with_replacements >> $FUNCTION_FILE_PATH
-    printf "}\n" >> $FUNCTION_FILE_PATH
-    printf "\n" >> $FUNCTION_FILE_PATH
+    chmod +x $FUNCTION_FILE_PATH
   done
-  echo "set +a" >> $FUNCTION_FILE_PATH
   # set +x
 }
 
