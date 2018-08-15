@@ -5,6 +5,11 @@ trap 'cleanTemporary && exit 1' SIGINT SIGTERM
 # paths
 FUNCTION_FILE_PATH="$HOME/local/bin/_functions"
 
+# TODO: have some kind of adaptor that allows files to be generated to the proper format
+# in any way? Trying to keep everything pure bash for now.
+
+# TODO: is it better to just create a file for each function?
+
 # this can be json in the future but for now consists of \n\n separate blocks
 # that contain the following format
 # alias name
@@ -65,13 +70,13 @@ generate() {
       fi
     done
 
-    total_parameters=$(( $(printf $replacement_mapping | wc -l) + 0 ))
+    total_parameters=$(( $(printf "$replacement_mapping" | wc -l) + 0 ))
     printf "\tif ! [ \$# -eq $total_parameters ]; then\n" >> $FUNCTION_FILE_PATH
     printf "\t\t" >> $FUNCTION_FILE_PATH
     echo "echo $DOCUMENTATION" >> $FUNCTION_FILE_PATH
     echo ""
     printf "\t\t" >> $FUNCTION_FILE_PATH
-    echo echo "USAGE: $ALIAS " "$(printf $replacement_mapping | tr '\n' ' ')" >> $FUNCTION_FILE_PATH
+    echo echo "USAGE: $ALIAS " "$(printf "$replacement_mapping" | tr '\n' ' ')" >> $FUNCTION_FILE_PATH
     echo ""
     printf "\t\treturn 1\n" >> $FUNCTION_FILE_PATH
     printf "\tfi\n" >> $FUNCTION_FILE_PATH
