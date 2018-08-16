@@ -55,16 +55,20 @@ generate() {
     for tok in $COMMAND; do
       extracted_replacement=$(echo $tok | grep -E -o "@[A-Za-z0-9]+")
       if ! [ -z "$extracted_replacement" ]; then
-        if ! printf "$replacement_mapping" | grep $extracted_replacement ; then
-          # found a replacement that isn't yet in the replacement mappings
-          # so add it to replacement mappings
-          replacement_mapping="${replacement_mapping}${extracted_replacement}\n"
-        fi
-        # our token is in the replacement mappings so we can add a replaced
+        for replacement in $extracted_replacement; do
+          if ! printf "${replacement_mapping}" | grep "$replacement"; then
+            replacement_mapping="${replacement_mapping}${replacement}\n"
+          fi
+        done
+
+        # our token(s) are in the replacement mappings so we can add a replaced
         # version to our command string
-        replacement_arg=$(printf $replacement_mapping | grep -n $extracted_replacement | cut -f 1 -d":")
-        replaced_token=$(echo $tok | sed -E "s/(@[a-zA-Z0-9_]+)/\$$replacement_arg/g")
-        command_with_replacements="$command_with_replacements $replaced_token"
+        replace_with="$tok"
+        for replacement in $extracted_replacement; do
+          replacement_arg=$(printf $replacement_mapping | grep -n $replacement | cut -f 1 -d":")
+          replace_with=$(echo $replace_with | sed -E "s/"$replacement"/\$$replacement_arg/g")
+        done
+        command_with_replacements="$command_with_replacements $replace_with"
       else
         command_with_replacements="$command_with_replacements $tok"
       fi
